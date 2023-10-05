@@ -5,7 +5,7 @@ from docx2pdf import convert
 from pdf2docx import parse
 from docx import Document
 import PyPDF2
-from pdf2image import convert_from_path
+from PIL import Image
 
 from pdf2jpeg import pdf_to_jpeg, select_output_folder
 
@@ -16,8 +16,8 @@ def update_destination_formats(*args):  # Показує варінати дру
     format_mappings = {
         "PDF": ["DOCX", "JPEG", "Text"],
         "DOCX": ["PDF", "Text"],
-        "JPEG": ["PDF"],
-        "Text": ["PDF", "DOCX"]
+        "Image": ["PDF"],
+        "Text": ["PDF", "DOCX"] #TODO: Доробити ковертування тексту
     }
 
     # Get the currently selected destination format
@@ -47,6 +47,8 @@ def converter():
         filetypes = [("PDF files", "*.pdf"), ("All files", "*.*")]
     elif selected_filetype == "DOCX":
         filetypes = [("DOCX files", "*.docx"), ("All files", "*.*")]
+    elif selected_filetype == "JPEG":
+        filetypes = [("JPEG files", "*.jpg;*.jpeg;*.png"), ("All files", "*.*")]
     if selected_filetype == ' ' or selected_filetype2 == ' ':  # Перевірка чи варінати вибрані
         source_format_var.set(" ")
         destination_format_var.set(" ")
@@ -85,8 +87,8 @@ def converter():
                 with open(file, 'rb') as pdf_file:
                     pdf_reader = PyPDF2.PdfReader(pdf_file)
                     for page_number in range(pdf_reader.getNumPages()):
-                            page = pdf_reader.getPage(page_number)
-                            text += page.extractText()
+                        page = pdf_reader.getPage(page_number)
+                        text += page.extractText()
                 path = os.path.splitext(file)[0] + ".txt"
                 with open(path, 'w') as txt:
                     txt.write(text)
@@ -101,11 +103,21 @@ def converter():
                     label.config(text=f"Converted {file} \nto {path}")
                     source_format_var.set(" ")
                     destination_format_var.set(" ")
+        elif selected_filetype == "JPEG": #TODO: Доробити так, щоб список зображень можна було ковертувати
+            path = select_output_folder()
+            out = os.path.splitext(file)[0] + ".pdf"  # Ім'я файлу
+            image_1 = Image.open(file)
+            im_1 = image_1.convert('RGB')
+            output_file_path = os.path.join(path, out)
+            im_1.save(output_file_path)
+            label.config(text=f"Converted {file} \nto {path}")
+            source_format_var.set(" ")
+            destination_format_var.set(" ") #TODO: Зробити красивіше виведення результату
 
 
 # Create the main window
 root = tk.Tk()
-root.title("File Format Converter")
+root.title("File Format Converter") #TODO: Зробити візуальнішо красивішою програму
 
 # Create a label for source format
 source_format_label = tk.Label(root, text="Convert from:")
@@ -116,7 +128,7 @@ source_format_var = tk.StringVar()
 source_format_var.set(" ")  # Set the initial source format
 
 # Create the source format dropdown menu
-source_format_menu = tk.OptionMenu(root, source_format_var, "PDF", "DOCX", "JPEG", "Text")
+source_format_menu = tk.OptionMenu(root, source_format_var, "PDF", "DOCX", "Image", "Text")
 source_format_menu.pack()
 
 # Create a label for destination format
@@ -138,5 +150,4 @@ label.pack()
 # Set a trace on the source format variable to update destination formats
 source_format_var.trace('w', update_destination_formats)
 
-# Start the Tkinter main loop
 root.mainloop()
